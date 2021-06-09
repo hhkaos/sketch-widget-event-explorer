@@ -15,6 +15,13 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/default.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/highlight.min.js"></script>
 
+
+    <script src="https://hhkaos.github.io/mercator-geographic-converter/json-stringify-pretty-compact.js"></script>
+
+
+    <link rel="stylesheet" type="text/css" href="jsonview.bundle.css">
+    <script type="text/javascript" src="http://pgrabovets.github.io/json-view/jsonview.bundle.js"></script>
+
     <style>
         html,
         body,
@@ -60,6 +67,21 @@
             overflow: auto;
             max-height: 250px;
         }
+
+        .json-container .fa-caret-down {
+            margin-top: 8px;
+        }
+
+        .json-container .fa-caret-right {
+            margin-top: 4px;
+        }
+
+        .json-container {
+            background-color: #f7f7f7;
+            padding: .5rem;
+            font-size: .9rem;
+            border: 1px solid #ccc;
+        }
     </style>
     <script type="module">
         import MapView from "https://js.arcgis.com/4.19/@arcgis/core/views/MapView.js";
@@ -95,6 +117,7 @@
         }
         
         esriConfig.apiKey = "AAPK76202f46f5694c1680a3a4a0e751571dTM8tpZJnl7tDZ1CmSqoKdjDAsXcchlh_vZ4ueJ7LBcMoa_f7wKkuP3wQ177-1rek";
+        // esriConfig.apiKey = "AAPK0ba9e7398f75409db0dabcb3d1fc9e58zVFUxQDpXcWaaJYlI1IUlpa0vBwOUqdylmVGpqmvUC0ATBfqvKJqqqIM53tTrP_q";
         
         const view = new MapView({
             container: "viewDiv",
@@ -142,10 +165,9 @@
             view.ui.add(sketch, "top-right");
             
             const logMessages = function(event, where) {
-                let graphicStr = "undefined";
-                if(event.graphic){
-                    graphicStr = `<br><pre><code class="language-javascript">${JSON.stringify(event.graphic.toJSON(), null, 2)}</code></pre>`;
-                }
+                // const details = `<pre><code class="language-javascript">${stringify(event)}</code></pre>`;
+                
+                // JSON.stringify(event, null, 2)
                 
                 const dateObject = new Date()
                 const humanDateFormat = dateObject.toLocaleString()
@@ -153,18 +175,19 @@
                 const el = renderNotice({
                     message: `
                         <b>Event triggered in ${where} #${eventCounter}</b>: ${humanDateFormat}<br>
-                        <b>Type (event.type)</b>: ${event.type}<br>
-                        <b>State (event.state)</b>: ${event.state}<br>
-                        <b>Tool (event.tool)</b>: ${event.tool}<br>
-                        <b>Graphic (event.graphic)</b>: ${graphicStr}
+                        <b>Type</b>: ${event.type} | <b>Tool</b>: ${event.tool}<br>
+                        <b>Event object:</b> <br><div id="eventObj${eventCounter}"></div>
                     `,
                     event 
                 });
                 
                 consoleDiv.prepend(el);
-                if(event.state === "complete"){
-                    hljs.highlightAll(el);
-                }
+                
+                // hljs.highlightAll(el);
+// debugger
+                const tree = JsonView.createTree(JSON.parse(JSON.stringify(event)));
+                JsonView.render(tree, document.querySelector('#eventObj'+eventCounter))
+                
                 
                 eventCounter++;
             }
