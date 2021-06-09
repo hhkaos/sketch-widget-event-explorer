@@ -31,7 +31,8 @@
             height: 100%;
         }
 
-        body {
+        body,
+        .row {
             display: flex;
             flex-direction: row;
             flex-wrap: wrap;
@@ -85,6 +86,22 @@
             padding: .5rem;
             font-size: .9rem;
             border: 1px solid #ccc;
+        }
+
+        #consoleDiv .column {
+            padding: .5rem;
+        }
+
+        #clearMsgs {
+            height: 35px;
+        }
+
+        [data-filter="events"] [msg-type="properties"] {
+            display: none;
+        }
+
+        [data-filter="properties"] [msg-type="events"] {
+            display: none;
         }
     </style>
     <script type="module">
@@ -142,6 +159,13 @@
             const state = config.event.type;
             el.setAttribute("color", calciteLegend[state].color);
             el.setAttribute("icon", calciteLegend[state].icon);
+            // debugger
+            if(state === "properties"){
+                el.setAttribute("msg-type", state);
+            }else{
+                el.setAttribute("msg-type", "events");
+            }
+            
             
             for (const prop in config){
                 let elType = "div";
@@ -150,7 +174,7 @@
                 }
                 const element = Object.assign(document.createElement(elType), {
                     slot: 'notice-' + prop,
-                    innerHTML: config[prop]
+                    innerHTML: config[prop],
                 });
                 el.appendChild(element);
             }
@@ -243,15 +267,33 @@
         document.getElementById("clearMsgs").addEventListener("click", (e)=>{
             document.getElementById('messages').innerHTML = "";
         });
+
+        document.getElementById("filterSelect").addEventListener("calciteSelectChange", (e)=>{
+            const filter = document.querySelector("#filterSelect [selected]").value
+            document.getElementById("messages").setAttribute("data-filter", filter)
+        });            
+        
+        
     </script>
 </head>
 
 <body>
     <div id="viewDiv" class="column"></div>
     <div id="consoleDiv" class="column">
-        <calcite-button id="clearMsgs" icon-start="erase" width="full">Clear messages</calcite-button>
-
-        <div id="messages"></div>
+        <div class="row">
+            <div class="column">
+                <calcite-button id="clearMsgs" icon-start="erase" scale="s" width="full">Clear messages
+                </calcite-button>
+            </div>
+            <div class="column">
+                <calcite-select id="filterSelect" width="full">
+                    <calcite-option value="none" selected>No filter</calcite-option>
+                    <calcite-option value="properties">Show only property changes</calcite-option>
+                    <calcite-option value="events">Show only events</calcite-option>
+                </calcite-select>
+            </div>
+        </div>
+        <div id="messages" data-filter="none"></div>
     </div>
 </body>
 
