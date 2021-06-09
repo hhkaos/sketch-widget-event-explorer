@@ -1,0 +1,188 @@
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <title>Sketch widget event explorer</title>
+
+    <script type="module" src="https://js.arcgis.com/calcite-components/1.0.0-beta.52/calcite.esm.js"></script>
+    <script nomodule="" src="https://js.arcgis.com/calcite-components/1.0.0-beta.52/calcite.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="https://js.arcgis.com/calcite-components/1.0.0-beta.52/calcite.css" />
+    <link rel="stylesheet" href="https://js.arcgis.com/4.19/esri/themes/light/main.css" />
+    <script src="https://js.arcgis.com/4.19/"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/default.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/highlight.min.js"></script>
+
+    <style>
+        html,
+        body,
+        #viewDiv {
+            padding: 0;
+            margin: 0;
+            height: 100%;
+        }
+
+        body {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            width: 100%;
+        }
+
+        .column {
+            display: flex;
+            flex-direction: column;
+            /* flex-basis: 100%; */
+            flex: 1;
+        }
+
+        #viewDiv {
+            width: 30%;
+        }
+
+        #consoleDiv {
+            background-color: rgb(238, 238, 238, .8);
+            padding: 1rem;
+            width: 70%;
+            max-height: 100vh;
+            overflow: auto;
+
+        }
+
+        calcite-notice {
+            margin-bottom: 1rem;
+            width: 100%;
+        }
+
+        div[slot="notice-message"] {
+            overflow: auto;
+            max-height: 250px;
+        }
+    </style>
+    <script type="module">
+        import MapView from "https://js.arcgis.com/4.19/@arcgis/core/views/MapView.js";
+        import esriConfig from "https://js.arcgis.com/4.19/@arcgis/core/config.js";
+        import GraphicsLayer from "https://js.arcgis.com/4.19/@arcgis/core/layers/GraphicsLayer.js";
+        import Sketch from "https://js.arcgis.com/4.19/@arcgis/core/widgets/Sketch.js";
+        
+        let eventCounter = 0;
+        const graphicsLayer = new GraphicsLayer();
+        
+        const stateProperties = {
+            start: {
+                color: "yellow",
+                icon: "play"
+            },
+            active: {
+                color: "blue",
+                icon: "pencil-mark"
+                
+            },
+            complete: {
+                color: "green",
+                icon: "check-square-f"
+            },
+            cancel: {
+                color: "red",
+                icon: "circle-disallowed"
+            },
+            delete: {
+                color: "red",
+                icon: "trash"
+            },
+        }
+        
+        esriConfig.apiKey = "AAPK76202f46f5694c1680a3a4a0e751571dTM8tpZJnl7tDZ1CmSqoKdjDAsXcchlh_vZ4ueJ7LBcMoa_f7wKkuP3wQ177-1rek";
+        
+        const view = new MapView({
+            container: "viewDiv",
+            map: {
+                basemap: "arcgis-navigation",
+                layers: [graphicsLayer]
+            },
+            center: {
+                latitude: 40.7353,
+                longitude: -3.149945
+            },
+            zoom: 5
+        });
+
+        const renderNotice = (config) => {
+            const el = document.createElement("calcite-notice");
+            el.setAttribute("active","")
+            
+            const state = config.event.state ?? config.event.type;
+            el.setAttribute("color",stateProperties[state].color);
+            el.setAttribute("icon",stateProperties[state].icon);
+            
+            for (const prop in config){
+                let elType = "div";
+                if(prop === "link"){
+                    elType = "calcite-link";
+                }
+                const element = Object.assign(document.createElement(elType), {
+                    slot: 'notice-' + prop,
+                    innerHTML: config[prop]
+                });
+                el.appendChild(element);
+            }
+            return el;  
+        };
+        
+        view.when(() => {
+            const sketch = new Sketch({
+                layer: graphicsLayer,
+                view: view,
+                creationMode: "update"
+            });
+            const consoleDiv = document.getElementById('consoleDiv');
+            
+            view.ui.add(sketch, "top-right");
+            
+            const logMessages = function(event, where) {
+                let graphicStr = "undefined";
+                if(event.graphic){
+                    graphicStr = `<br><pre><code class="language-javascript">${JSON.stringify(event.graphic.toJSON(), null, 2)}</code></pre>`;
+                }
+                
+                const dateObject = new Date()
+                const humanDateFormat = dateObject.toLocaleString()
+                console.log("event = ", event);
+                const el = renderNotice({
+                    message: `
+                        <b>Event triggered in ${where} #${eventCounter}</b>: ${humanDateFormat}<br>
+                        <b>Type (event.type)</b>: ${event.type}<br>
+                        <b>State (event.state)</b>: ${event.state}<br>
+                        <b>Tool (event.tool)</b>: ${event.tool}<br>
+                        <b>Graphic (event.graphic)</b>: ${graphicStr}
+                    `,
+                    event 
+                });
+                
+                consoleDiv.prepend(el);
+                if(event.state === "complete"){
+                    hljs.highlightAll(el);
+                }
+                
+                eventCounter++;
+            }
+                
+            sketch.on(["create", "delete", "redo", "undo", "update"], function(event){
+                logMessages(event, "model")
+            });
+
+            // sketch.viewModel.on(["create", "delete", "redo", "undo", "update"], function(event){
+            //     logMessages(event, "view")
+            // });
+        });
+    </script>
+</head>
+
+<body>
+    <div id="viewDiv" class="column"></div>
+    <div id="consoleDiv" class="column"></div>
+</body>
+
+</html>
