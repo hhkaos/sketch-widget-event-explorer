@@ -63,6 +63,10 @@
             width: 100%;
         }
 
+        calcite-button {
+            margin-bottom: 1rem;
+        }
+
         div[slot="notice-message"] {
             overflow: auto;
             max-height: 250px;
@@ -92,23 +96,22 @@
         let eventCounter = 0;
         const graphicsLayer = new GraphicsLayer();
         
-        const stateProperties = {
-            start: {
-                color: "yellow",
-                icon: "play"
+        const calciteLegend = {
+            create: {
+                color: "green",
+                icon: "plus-square"
             },
-            active: {
+            update: {
                 color: "blue",
                 icon: "pencil-mark"
-                
             },
-            complete: {
-                color: "green",
-                icon: "check-square-f"
+            undo: {
+                color: "blue",
+                icon: "pencil-mark"
             },
-            cancel: {
-                color: "red",
-                icon: "circle-disallowed"
+            properties: {
+                color: "yellow",
+                icon: "legend"
             },
             delete: {
                 color: "red",
@@ -136,9 +139,9 @@
             const el = document.createElement("calcite-notice");
             el.setAttribute("active","")
             
-            const state = config.event.state ?? config.event.type;
-            el.setAttribute("color",stateProperties[state].color);
-            el.setAttribute("icon",stateProperties[state].icon);
+            const state = config.event.type;
+            el.setAttribute("color", calciteLegend[state].color);
+            el.setAttribute("icon", calciteLegend[state].icon);
             
             for (const prop in config){
                 let elType = "div";
@@ -160,11 +163,11 @@
                 view: view,
                 creationMode: "update"
             });
-            const consoleDiv = document.getElementById('consoleDiv');
+            const consoleDiv = document.getElementById('messages');
             
             view.ui.add(sketch, "top-right");
             
-            const logMessages = function(event, where) {
+            const logMessages = function(event, properties, where) {
                 // const details = `<pre><code class="language-javascript">${stringify(event)}</code></pre>`;
                 
                 // JSON.stringify(event, null, 2)
@@ -172,12 +175,25 @@
                 const dateObject = new Date()
                 const humanDateFormat = dateObject.toLocaleString()
                 console.log("event = ", event);
+
+                let propStr = "";
+                
+                properties = properties.map(prop => {
+                    return `<b>${prop.capitalize()}</b>: ${event[prop]}`;
+                });
+
+                let msg = `
+                    <b>Change #${eventCounter}</b>: ${where} | <b>When</b>: ${humanDateFormat}<br>
+                    ${properties.join(' | ')}
+                    
+                `;
+
+                if(event.type !== "properties"){
+                    msg +=  `<br><b>Event details:</b> <br><div id="eventObj${eventCounter}"></div>`;
+                }
+
                 const el = renderNotice({
-                    message: `
-                        <b>Event triggered in ${where} #${eventCounter}</b>: ${humanDateFormat}<br>
-                        <b>Type</b>: ${event.type} | <b>Tool</b>: ${event.tool}<br>
-                        <b>Event object:</b> <br><div id="eventObj${eventCounter}"></div>
-                    `,
+                    message: msg,
                     event 
                 });
                 
@@ -185,27 +201,58 @@
                 
                 // hljs.highlightAll(el);
 // debugger
-                const tree = JsonView.createTree(JSON.parse(JSON.stringify(event)));
-                JsonView.render(tree, document.querySelector('#eventObj'+eventCounter))
+                if(event.type !== "properties"){
+                    const tree = JsonView.createTree(JSON.parse(JSON.stringify(event)));
+                    JsonView.render(tree, document.querySelector('#eventObj'+eventCounter))
+                }
+                
                 
                 
                 eventCounter++;
             }
+
+            const handle = sketch.watch(['activeTool', 'state', 'defaultCreateOptions', 'defaultUpdateOptions', 'snappingOptions.enabled'], (newValue, oldValue, property, object) => {
+                const event = {
+                    property,
+                    newValue, 
+                    oldValue, 
+                    // object,
+                    type: "properties"
+                }
+                logMessages(event, ["property", "oldValue", "newValue"], "sketch property changed")
+                // debugger
+                console.log(`property = ${property} | newValue = ${newValue} | oldValue = ${oldValue}`);
+                
+            });
+
                 
             sketch.on(["create", "delete", "redo", "undo", "update"], function(event){
-                logMessages(event, "model")
+                logMessages(event, ["type", "state", "tool"], "event triggered at sketch (model)")
             });
 
             // sketch.viewModel.on(["create", "delete", "redo", "undo", "update"], function(event){
             //     logMessages(event, "view")
             // });
         });
+
+        // debugger
+        String.prototype.capitalize = function() {
+            return this.charAt(0).toUpperCase() + this.slice(1)
+        }
+
+        document.getElementById("clearMsgs").addEventListener("click", (e)=>{
+            document.getElementById('messages').innerHTML = "";
+        });
     </script>
 </head>
 
 <body>
     <div id="viewDiv" class="column"></div>
-    <div id="consoleDiv" class="column"></div>
+    <div id="consoleDiv" class="column">
+        <calcite-button id="clearMsgs" icon-start="erase" width="full">Clear messages</calcite-button>
+
+        <div id="messages"></div>
+    </div>
 </body>
 
 </html>
