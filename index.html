@@ -136,13 +136,11 @@
             },
         }
         
-        esriConfig.apiKey = "AAPK76202f46f5694c1680a3a4a0e751571dTM8tpZJnl7tDZ1CmSqoKdjDAsXcchlh_vZ4ueJ7LBcMoa_f7wKkuP3wQ177-1rek";
-        // esriConfig.apiKey = "AAPK0ba9e7398f75409db0dabcb3d1fc9e58zVFUxQDpXcWaaJYlI1IUlpa0vBwOUqdylmVGpqmvUC0ATBfqvKJqqqIM53tTrP_q";
         
         const view = new MapView({
             container: "viewDiv",
             map: {
-                basemap: "arcgis-navigation",
+                basemap: "streets-navigation-vector",
                 layers: [graphicsLayer]
             },
             center: {
